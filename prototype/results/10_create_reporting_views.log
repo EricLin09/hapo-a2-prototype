@@ -1,0 +1,31 @@
+BEGIN
+NOTICE:  function reporting.dashboard_fingerprint() does not exist, skipping
+DROP FUNCTION
+DROP VIEW
+NOTICE:  view "vw_dashboard_uc1" does not exist, skipping
+NOTICE:  view "vw_dashboard_uc2" does not exist, skipping
+NOTICE:  view "vw_dashboard_uc3" does not exist, skipping
+NOTICE:  view "vw_lineage" does not exist, skipping
+NOTICE:  view "vw_housing_pipeline" does not exist, skipping
+NOTICE:  view "vw_population_supply" does not exist, skipping
+NOTICE:  view "vw_rental_affordability" does not exist, skipping
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE FUNCTION
+COMMIT
+     reporting_view      
+-------------------------
+ vw_dashboard_uc1
+ vw_dashboard_uc2
+ vw_dashboard_uc3
+ vw_housing_pipeline
+ vw_lineage
+ vw_population_supply
+ vw_rental_affordability
+(7 rows)
+

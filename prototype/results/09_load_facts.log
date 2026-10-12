@@ -1,0 +1,16 @@
+BEGIN
+TRUNCATE TABLE
+INSERT 0 720
+INSERT 0 10
+INSERT 0 29
+INSERT 0 718
+DO
+COMMIT
+     fact_table      | row_count 
+---------------------+-----------
+ fact_rental         |       720
+ fact_census_income  |        10
+ fact_population     |        29
+ fact_housing_supply |       718
+(4 rows)
+

@@ -1,0 +1,20 @@
+BEGIN
+TRUNCATE TABLE
+NOTICE:  truncate cascades to table "fact_rental"
+NOTICE:  truncate cascades to table "fact_census_income"
+NOTICE:  truncate cascades to table "fact_population"
+NOTICE:  truncate cascades to table "fact_housing_supply"
+TRUNCATE TABLE
+INSERT 0 2191
+INSERT 0 10
+INSERT 0 20
+INSERT 0 3
+COMMIT
+     dimension      | row_count | first_member  | last_member 
+--------------------+-----------+---------------+-------------
+ dim_time           |      2191 | 2021-01-01    | 2026-12-31
+ dim_geography      |        10 | Blacktown     | Sydney
+ dim_dwelling_type  |        20 | All dwellings | Townhouse
+ dim_pipeline_stage |         3 | CC_APPROVED   | LODGED
+(4 rows)
+

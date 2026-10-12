@@ -1,0 +1,24 @@
+BEGIN
+CREATE FUNCTION
+TRUNCATE TABLE
+SELECT 10
+INSERT 0 720
+INSERT 0 1
+INSERT 0 7
+INSERT 0 10
+INSERT 0 2
+INSERT 0 30
+INSERT 0 1
+INSERT 0 30
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+COMMIT
+            landing_table             | file_rows 
+--------------------------------------+-----------
+ landing.dcj_rent_lga_quarter         |       728
+ landing.abs_census_g02_lga           |        12
+ landing.abs_erp_lga                  |        31
+ landing.nsw_housing_supply_lga_month |        31
+(4 rows)
+

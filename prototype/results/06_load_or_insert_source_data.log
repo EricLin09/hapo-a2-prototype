@@ -1,0 +1,20 @@
+BEGIN
+CREATE TABLE
+INSERT 0 1
+SELECT 4
+INSERT 0 4
+INSERT 0 728
+INSERT 0 12
+INSERT 0 31
+INSERT 0 31
+DO
+UPDATE 1
+COMMIT
+ load_batch_id | status  | files_loaded | rows_loaded | source_system |               source_file_name               | row_count |           content_md5            
+---------------+---------+--------------+-------------+---------------+----------------------------------------------+-----------+----------------------------------
+             1 | SUCCESS |            4 |         802 | DCJ_RENT      | synthetic_DCJ_rent_LGA_quarterly.csv         |       728 | a065f25f23320f315eb3e7455385642b
+             1 | SUCCESS |            4 |         802 | ABS_CENSUS    | 2021Census_G02_NSW_LGA_synthetic.csv         |        12 | 073d15e7db566b126d51ed3fc55d2980
+             1 | SUCCESS |            4 |         802 | ABS_ERP       | synthetic_ABS_ERP_LGA_30June.csv             |        31 | e16cf387b4fb340e6825ffea6b0550ce
+             1 | SUCCESS |            4 |         802 | NSW_HOUSING   | synthetic_NSW_housing_supply_LGA_monthly.csv |        31 | 2d4637704aa6b06937fcf16915952e7a
+(4 rows)
+

@@ -1,0 +1,6 @@
+/*
+!/.gitignore
+!/prototype/
+!/docs/
+.DS_Store
+*.tmp

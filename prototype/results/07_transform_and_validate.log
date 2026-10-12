@@ -1,0 +1,58 @@
+BEGIN
+SELECT 4
+TRUNCATE TABLE
+NOTICE:  table "stg_rental" does not exist, skipping
+DROP TABLE
+SELECT 728
+SELECT 728
+UPDATE 1
+INSERT 0 8
+INSERT 0 720
+NOTICE:  table "stg_census_income" does not exist, skipping
+DROP TABLE
+SELECT 12
+SELECT 12
+UPDATE 0
+INSERT 0 2
+INSERT 0 10
+DROP TABLE
+NOTICE:  table "stg_population" does not exist, skipping
+SELECT 31
+SELECT 31
+UPDATE 0
+INSERT 0 2
+INSERT 0 29
+NOTICE:  table "stg_housing_supply" does not exist, skipping
+DROP TABLE
+SELECT 744
+SELECT 744
+UPDATE 0
+INSERT 0 26
+INSERT 0 718
+DO
+COMMIT
+ source_system | rule_code |                      rule_description                      | rejected_rows 
+---------------+-----------+------------------------------------------------------------+---------------
+ ABS_CENSUS    | R01       | LGA cannot be resolved to an in-scope LGA code             |             1
+ ABS_CENSUS    | R03       | Measure is non-numeric, negative or zero where not allowed |             1
+ ABS_ERP       | R06       | Required measure is missing (blank)                        |             1
+ ABS_ERP       | R07       | Measure outside the plausible range (outlier, quarantined) |             1
+ DCJ_RENT      | R01       | LGA cannot be resolved to an in-scope LGA code             |             1
+ DCJ_RENT      | R02       | Reference period cannot be parsed                          |             1
+ DCJ_RENT      | R05       | Source category or measure has no approved mapping         |             1
+ DCJ_RENT      | R03       | Measure is non-numeric, negative or zero where not allowed |             2
+ DCJ_RENT      | R07       | Measure outside the plausible range (outlier, quarantined) |             2
+ DCJ_RENT      | R04       | Duplicate of an earlier row for the same business grain    |             1
+ NSW_HOUSING   | R05       | Source category or measure has no approved mapping         |            24
+ NSW_HOUSING   | R06       | Required measure is missing (blank)                        |             1
+ NSW_HOUSING   | R03       | Measure is non-numeric, negative or zero where not allowed |             1
+(13 rows)
+
+ source_system | staged | accepted 
+---------------+--------+----------
+ DCJ_RENT      |    728 |      720
+ ABS_CENSUS    |     12 |       10
+ ABS_ERP       |     31 |       29
+ NSW_HOUSING   |    744 |      718
+(4 rows)
+

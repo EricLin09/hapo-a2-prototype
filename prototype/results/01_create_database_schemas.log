@@ -1,0 +1,36 @@
+BEGIN
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMIT
+  schema_name   
+----------------
+ control
+ curated
+ dw
+ landing
+ reporting
+ src_census
+ src_housing
+ src_population
+ src_rental
+ staging
+(10 rows)
+

@@ -1,0 +1,82 @@
+BEGIN
+NOTICE:  drop cascades to 8 other objects
+DETAIL:  drop cascades to view reporting.vw_rental_affordability
+drop cascades to view reporting.vw_population_supply
+drop cascades to view reporting.vw_housing_pipeline
+drop cascades to view reporting.vw_lineage
+drop cascades to view reporting.vw_dashboard_uc1
+drop cascades to view reporting.vw_dashboard_uc2
+drop cascades to view reporting.vw_dashboard_uc3
+drop cascades to function reporting.dashboard_fingerprint()
+DROP SCHEMA
+NOTICE:  drop cascades to 8 other objects
+DETAIL:  drop cascades to table dw.dim_time
+drop cascades to table dw.dim_geography
+drop cascades to table dw.dim_dwelling_type
+drop cascades to table dw.dim_pipeline_stage
+drop cascades to table dw.fact_rental
+drop cascades to table dw.fact_census_income
+drop cascades to table dw.fact_population
+drop cascades to table dw.fact_housing_supply
+DROP SCHEMA
+NOTICE:  drop cascades to 24 other objects
+DETAIL:  drop cascades to function curated.norm_text(text)
+drop cascades to function curated.parse_dcj_quarter(text)
+drop cascades to function curated.parse_month_column(text)
+drop cascades to function curated.is_whole_number_text(text)
+drop cascades to function curated.to_whole_number(text)
+drop cascades to function curated.is_money_text(text)
+drop cascades to function curated.to_money(text)
+drop cascades to function curated.is_plausible_weekly_rent(numeric)
+drop cascades to function curated.census_reference_date(smallint)
+drop cascades to function curated.is_blank(text)
+drop cascades to function curated.financial_year(date)
+drop cascades to table curated.lga_reference
+drop cascades to table curated.lga_alias
+drop cascades to table curated.geography_crosswalk
+drop cascades to table curated.dwelling_type_map
+drop cascades to table curated.bedroom_band_map
+drop cascades to table curated.pipeline_stage_reference
+drop cascades to table curated.pipeline_stage_map
+drop cascades to table curated.validation_rule
+drop cascades to table curated.rejected_row
+drop cascades to table curated.rental_accepted
+drop cascades to table curated.census_income_accepted
+drop cascades to table curated.population_accepted
+drop cascades to table curated.housing_supply_accepted
+DROP SCHEMA
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to table staging.stg_rental
+drop cascades to table staging.stg_census_income
+drop cascades to table staging.stg_population
+drop cascades to table staging.stg_housing_supply
+DROP SCHEMA
+NOTICE:  drop cascades to table src_rental.rent_lga_quarter_raw
+DROP SCHEMA
+NOTICE:  drop cascades to table src_census.census_lga_income_raw
+DROP SCHEMA
+NOTICE:  drop cascades to table src_population.population_lga_year_raw
+DROP SCHEMA
+NOTICE:  drop cascades to table src_housing.housing_supply_lga_month_raw
+DROP SCHEMA
+NOTICE:  drop cascades to 5 other objects
+DETAIL:  drop cascades to table landing.dcj_rent_lga_quarter
+drop cascades to table landing.abs_census_g02_lga
+drop cascades to table landing.abs_erp_lga
+drop cascades to table landing.nsw_housing_supply_lga_month
+drop cascades to function landing.synth_u(text)
+DROP SCHEMA
+NOTICE:  drop cascades to 6 other objects
+DETAIL:  drop cascades to table control.load_batch
+drop cascades to table control.source_file
+drop cascades to sequence control.test_run_seq
+drop cascades to table control.test_result
+drop cascades to table control.test_run
+drop cascades to table control.test_work
+DROP SCHEMA
+COMMIT
+                    result                    
+----------------------------------------------
+ hapo_a2 reset: all prototype schemas removed
+(1 row)
+
