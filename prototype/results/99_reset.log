@@ -19,7 +19,7 @@ drop cascades to table dw.fact_census_income
 drop cascades to table dw.fact_population
 drop cascades to table dw.fact_housing_supply
 DROP SCHEMA
-NOTICE:  drop cascades to 24 other objects
+NOTICE:  drop cascades to 25 other objects
 DETAIL:  drop cascades to function curated.norm_text(text)
 drop cascades to function curated.parse_dcj_quarter(text)
 drop cascades to function curated.parse_month_column(text)
@@ -29,6 +29,7 @@ drop cascades to function curated.is_money_text(text)
 drop cascades to function curated.to_money(text)
 drop cascades to function curated.is_plausible_weekly_rent(numeric)
 drop cascades to function curated.census_reference_date(smallint)
+drop cascades to function curated.parse_erp_reference_date(text)
 drop cascades to function curated.is_blank(text)
 drop cascades to function curated.financial_year(date)
 drop cascades to table curated.lga_reference

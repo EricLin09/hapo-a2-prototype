@@ -3,5 +3,6 @@
 !/prototype/
 !/docs/
 !/.github/
+!/database/
 .DS_Store
 *.tmp

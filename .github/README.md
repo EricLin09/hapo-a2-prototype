@@ -15,6 +15,7 @@ prototype/
 ├── dashboard/        static dashboard (index.html, app.js, style.css, data.js) and its exporter
 ├── results/          logs from the latest build; 11_run_quality_tests.log = test evidence
 └── README.md         full details: file → design mapping, deviations from the draft, limitations
+database/             hapo_a2.sql: full database snapshot (pg_dump) with restore instructions
 docs/                 architecture and data model diagrams (added when the first diagram is committed)
 ```
 
