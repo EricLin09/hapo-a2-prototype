@@ -26,7 +26,7 @@ For a clean manual build, connect to `hapo_a2` (VS Code, CloudBeaver or psql), r
 | 00_environment | Platform: PostgreSQL in the Docker lab | Version and database check (database created by `run_all.sh`) |
 | 99_reset | Testing: clean rebuild | Drops prototype schemas only |
 | 01_create_database_schemas | Architecture 2.1 schema layout | 10 schemas |
-| 02_create_control_tables | CONTROL: LOAD_BATCH, SOURCE_FILE, TEST_RESULT (+ TEST_WORK) | 4 tables |
+| 02_create_control_tables | CONTROL: LOAD_BATCH, SOURCE_FILE, TEST_RESULT (+ TEST_RUN, TEST_WORK) | 5 tables |
 | 03_create_source_tables | (vi)a source systems: SRC_RENTAL / CENSUS / POPULATION / HOUSING | 4 landing tables + 4 source tables |
 | 04_create_curated_and_dw_tables | Logical model 4: curated reference data, REJECTED_ROW, 4 dims, 4 facts | DDL, plus seeded reference data |
 | 05_generate_source_data | (vi)c synthetic data, with planted invalid rows | 728 / 12 / 31 / 31 source-shaped rows |
