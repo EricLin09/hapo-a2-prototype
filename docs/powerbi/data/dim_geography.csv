@@ -1,0 +1,11 @@
+geography_key,geography_level,geography_code,lga_code,lga_name,state_code,asgs_edition,valid_from,valid_to,current_flag
+1,LGA,10750,10750,Blacktown,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+2,LGA,11500,11500,Campbelltown (NSW),NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+3,LGA,11570,11570,Canterbury-Bankstown,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+4,LGA,12380,12380,Cumberland,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+5,LGA,12850,12850,Fairfield,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+6,LGA,14900,14900,Liverpool,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+7,LGA,15900,15900,Newcastle,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+8,LGA,16260,16260,Parramatta,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+9,LGA,16350,16350,Penrith,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE
+10,LGA,17200,17200,Sydney,NSW,ASGS Edition 3 (2021),2021-07-01,,TRUE

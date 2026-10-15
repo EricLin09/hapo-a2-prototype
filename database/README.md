@@ -10,8 +10,11 @@ Start the course lab first (`docker compose up -d` in your `advanced-database-la
 
 ```bash
 docker exec student-postgres psql -U student -d postgres -c "CREATE DATABASE hapo_a2"
-docker exec -i student-postgres psql -q -U student -d hapo_a2 -v ON_ERROR_STOP=1 < hapo_a2.sql
+docker cp hapo_a2.sql student-postgres:/tmp/hapo_a2.sql
+docker exec student-postgres psql -q -U student -d hapo_a2 -v ON_ERROR_STOP=1 -f /tmp/hapo_a2.sql
 ```
+
+These commands work the same in macOS Terminal and Windows PowerShell.
 
 If `CREATE DATABASE` says the database already exists, you already have a copy (for example from `run_all.sh`). To replace it, drop it first with `docker exec student-postgres psql -U student -d postgres -c "DROP DATABASE hapo_a2"`; this deletes only `hapo_a2`, never the course database `lab`.
 
