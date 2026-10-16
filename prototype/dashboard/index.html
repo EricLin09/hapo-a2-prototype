@@ -3,67 +3,56 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HAPO | NSW Housing Affordability Planning Office</title>
+  <title>HAPO Prototype Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="data.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
-  <div class="ambient-grid" aria-hidden="true"></div>
-  <div class="shell">
-    <div class="topbar" id="top">
-      <a class="brand" href="#top"><span class="brand-glyph">/\</span><span>HAPO</span><small>DATA CONSOLE / A2</small></a>
-      <nav class="quick-nav" aria-label="Use cases"><a href="#uc1">01 RENT</a><a href="#uc2">02 DEMAND</a><a href="#uc3">03 PIPELINE</a></nav>
-      <div class="system-status" id="verification-status"><span class="signal"></span><span id="verification-badge">CHECKING EXPORT</span></div>
-    </div>
+  <header>
+    <h1>NSW Housing Affordability Planning Office (HAPO) &ndash; Prototype Dashboard</h1>
+    <p id="verification-detail">Export status unknown</p>
+    <p>Data: <span id="metric-lgas">&ndash;</span> LGAs (ASGS 2021), <span id="metric-quarters">&ndash;</span> rent quarters, <span id="metric-months">&ndash;</span> months of approval data. All measures are synthetic.</p>
+  </header>
 
-    <header class="masthead">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="eyebrow-line"></span> NSW / HOUSING AFFORDABILITY PLANNING</div>
-        <h1>NSW Housing<br><span>Affordability</span><br>Planning Office<span class="cursor">_</span></h1>
-        <p>Explore three planning questions using integrated LGA-level rent, population and housing approval data.</p>
-        <div class="hero-tags"><span>ASGS 2021</span><span>POSTGRESQL LAB</span><span>SYNTHETIC PROTOTYPE</span></div>
-      </div>
-      <div class="hero-radar" aria-hidden="true"><div class="radar-ring ring-one"></div><div class="radar-ring ring-two"></div><div class="radar-ring ring-three"></div><div class="radar-cross cross-x"></div><div class="radar-cross cross-y"></div><div class="radar-core">HAPO<span>03 / USE CASES</span></div><span class="radar-coordinate coordinate-one">LGA / NSW</span><span class="radar-coordinate coordinate-two">ASGS / 2021</span></div>
-      <div class="hero-bottom"><span><i></i><span id="verification-detail">EXPORT STATUS UNKNOWN</span></span><span>SOURCE → ETL → WAREHOUSE → REPORT</span><span>DEMO DATA / NO NSW FINDINGS</span></div>
-    </header>
-
-    <div class="telemetry" aria-label="Dataset snapshot">
-      <div class="metric"><span class="metric-label">LGAS / COVERED</span><strong id="metric-lgas">—</strong><span class="metric-foot">ASGS 2021 geography</span></div>
-      <div class="metric"><span class="metric-label">RENT / QUARTERS</span><strong id="metric-quarters">—</strong><span class="metric-foot">source total medians</span></div>
-      <div class="metric"><span class="metric-label">SUPPLY / MONTHS</span><strong id="metric-months">—</strong><span class="metric-foot">three approval stages</span></div>
-      <div class="metric accent-metric"><span class="metric-label">DATASET / MODE</span><strong>SIM<span class="metric-suffix">.ONLY</span></strong><span class="metric-foot">controlled test fixture</span></div>
-    </div>
-
-    <main>
-      <section class="panel" id="uc1">
-        <div class="section-top"><div class="section-id"><span>01</span> / RENTAL PRESSURE</div><div class="chip">UC1 · PRESSURE PROXY</div></div>
-        <div class="panel-heading"><div><h2>Where is rental pressure highest?</h2><p class="intro">Latest LGA ranking and quarterly rent-to-income proxy.</p></div><div class="panel-readout"><span>SELECTED LGA / RATIO</span><strong id="rent-focus">—</strong></div></div>
-        <div class="controls"><label for="rent-lga">TREND LGA</label><select id="rent-lga"></select><span id="rent-quarter" class="period"></span></div>
-        <div class="split">
-          <div class="chart-card"><div class="chart-title">Rent ÷ 2021 median household income <small>Latest quarter · %</small></div><div id="rent-bars" class="chart"></div></div>
-          <div class="chart-card"><div class="chart-title">Selected LGA trend <small>Quarterly proxy · %</small></div><div id="rent-trend" class="chart"></div></div>
+  <main>
+    <section id="uc1">
+      <h2>UC1. Where is rental pressure highest?</h2>
+      <p>Median weekly rent divided by the 2021 Census median weekly household income, by LGA.</p>
+      <p class="controls"><label for="rent-lga">LGA for trend:</label> <select id="rent-lga"></select> Latest quarter: <span id="rent-quarter"></span>. Selected LGA ratio: <span id="rent-focus">&ndash;</span></p>
+      <div class="split">
+        <div>
+          <h3>Rent-to-income ratio, latest quarter (%)</h3>
+          <div id="rent-bars" class="chart"></div>
         </div>
-        <p class="caveat">Area-level indicator only. The income denominator is fixed at the 2021 Census; this is not household rent burden or a measure of real-income change.</p>
-      </section>
+        <div>
+          <h3>Selected LGA, by quarter (%)</h3>
+          <div id="rent-trend" class="chart"></div>
+        </div>
+      </div>
+      <p class="note">Note: area-level indicator only. The income denominator is fixed at the 2021 Census; this is not household rent burden or a measure of real-income change.</p>
+    </section>
 
-      <section class="panel" id="uc2">
-        <div class="section-top"><div class="section-id"><span>02</span> / POPULATION &amp; APPROVALS</div><div class="chip">UC2 · ACTIVITY PROXY</div></div>
-        <div class="panel-heading"><div><h2>Population growth vs approval activity</h2><p class="intro">Annual population growth against DA-approved dwellings per 1,000 residents.</p></div><div class="panel-readout"><span>COMPARABLE LGAS</span><strong id="supply-focus">—</strong></div></div>
-        <div class="controls"><label for="supply-year">FINANCIAL YEAR</label><select id="supply-year"></select><span class="period">Each dot = one LGA</span></div>
-        <div class="chart-card wide"><div class="chart-title">Growth and approved dwellings <small>Hover or tap a dot for exact values</small></div><div id="supply-scatter" class="chart"></div></div>
-        <p class="caveat">Approval counts are activity, not completed homes. Population and dwellings have different units. Hollow dots indicate an incomplete supply year. <span id="supply-coverage"></span></p>
-      </section>
+    <section id="uc2">
+      <h2>UC2. Population growth vs approval activity</h2>
+      <p>Annual population growth against DA-approved dwellings per 1,000 residents. Each dot is one LGA; hover over a dot for its values.</p>
+      <p class="controls"><label for="supply-year">Financial year:</label> <select id="supply-year"></select> Comparable LGAs: <span id="supply-focus">&ndash;</span></p>
+      <div id="supply-scatter" class="chart"></div>
+      <p class="note">Note: approval counts are activity, not completed homes, and population and dwellings have different units. A hollow dot means an incomplete supply year. <span id="supply-coverage"></span></p>
+    </section>
 
-      <section class="panel" id="uc3">
-        <div class="section-top"><div class="section-id"><span>03</span> / PIPELINE ACTIVITY</div><div class="chip">UC3 · APPROVAL STAGES</div></div>
-        <div class="panel-heading"><div><h2>Local housing approval pipeline</h2><p class="intro">Monthly lodgements, DA approvals and construction certificates.</p></div><div class="panel-readout"><span>LATEST DA APPROVALS</span><strong id="pipeline-focus">—</strong></div></div>
-        <div class="controls"><label for="pipeline-lga">CHOOSE LGA</label><select id="pipeline-lga"></select><span id="pipeline-period" class="period"></span></div>
-        <div class="chart-card wide"><div class="chart-title">Dwellings by published stage <small>Monthly counts · hover or tap a month</small></div><div id="pipeline-lines" class="chart"></div><div class="legend"><span><i class="lodged"></i>Lodged DAs</span><span><i class="da"></i>DA approved</span><span><i class="cc"></i>CC approved</span></div></div>
-        <p class="caveat">These are independent counts for each month, not the same projects moving through stages. The selected source does not provide LGA-level completions.</p>
-      </section>
-    </main>
-    <footer><span>HAPO / TEAM 3 / ASSIGNMENT 2</span><span>ALL MEASURES SYNTHETIC · NOT NSW FINDINGS</span><a href="#top">RETURN TO TOP ↑</a></footer>
-  </div>
+    <section id="uc3">
+      <h2>UC3. Local housing approval pipeline</h2>
+      <p>Monthly dwellings lodged, DA approved and construction certificate (CC) approved. Hover over a month for its values.</p>
+      <p class="controls"><label for="pipeline-lga">LGA:</label> <select id="pipeline-lga"></select> Period: <span id="pipeline-period"></span>. Latest DA approvals: <span id="pipeline-focus">&ndash;</span></p>
+      <div id="pipeline-lines" class="chart"></div>
+      <p class="legend"><span class="key key-lodged"></span> Lodged &nbsp; <span class="key key-da"></span> DA approved &nbsp; <span class="key key-cc"></span> CC approved</p>
+      <p class="note">Note: these are independent counts for each month, not the same projects moving through stages. The source does not provide LGA-level completions.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>All measures are synthetic test data for UTS 32113 Assignment 2. LGA codes and names are real ASGS 2021 values; no figure is a real NSW finding.</p>
+  </footer>
 </body>
 </html>

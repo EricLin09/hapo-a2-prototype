@@ -21,7 +21,7 @@ docs/                 architecture and data model diagrams (added when the first
 
 ## Look at it without installing anything
 
-Download the repository (**Code → Download ZIP**) and open `prototype/dashboard/index.html` in a browser. It shows the result of the latest tested build; the top bar should say **VERIFIED**.
+Download the repository (**Code → Download ZIP**) and open `prototype/dashboard/index.html` in a browser. It shows the result of the latest tested build; the status line at the top should say **Status: VERIFIED**.
 
 ## Rebuild and test it
 

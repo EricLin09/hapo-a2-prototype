@@ -1,33 +1,11 @@
--- =============================================================================
--- File        : 10_create_reporting_views.sql
--- Purpose     : Publish the stable query layer used for the three use-case
---               reports and the lineage (traceability) evidence.
--- Design link : Reports and Output Design 6 / 6.1 (UC1 Rental Affordability,
---               UC2 Population Demand vs Housing Supply, UC3 Housing Supply
---               Pipeline, Lineage evidence); Data Flow step 9 "Publish";
---               A1 use cases UC1-UC3 and UC5.
--- Owner       : Team 3 (views); report builders/reconcilers query these views
--- Run in      : database hapo_a2
--- Depends on  : 09_load_facts.sql
--- Re-runnable : yes (views are dropped and recreated)
--- Expected    : 7 views in schema reporting (4 report + 3 dashboard export) and
---               the function reporting.dashboard_fingerprint()
---
--- Rules the views enforce (Report Limitations 6.1)
---   * Facts are aggregated to a common LGA + period BEFORE being combined.
---   * UC1 uses the source's "All dwellings / All bedrooms" median for the LGA
---     headline; subgroup medians are never combined into an LGA median.
---   * UC1 compares current rent with the latest Census income available at
---     that quarter (2021) and says so in every row.
---   * UC2 sums supply over the financial year (July-June) so it lines up with
---     the 30 June population estimates; incomplete years are flagged.
---   * UC3 shows stages as independent period counts - no conversion rates.
--- =============================================================================
+-- 10_create_reporting_views.sql
+-- Creates the report views for UC1-UC3, the lineage view, the three dashboard
+-- export views and the dashboard fingerprint function.
+-- Run in: hapo_a2. Depends on: 09.
 
 BEGIN;
 
--- Dropped first so that a change in a view's columns never blocks a re-run
--- (CREATE OR REPLACE VIEW cannot remove or reorder columns).
+-- Drop the dependent objects first so the views can be recreated.
 DROP FUNCTION IF EXISTS reporting.dashboard_fingerprint();
 DROP VIEW IF EXISTS reporting.vw_dashboard_uc1,
                     reporting.vw_dashboard_uc2,
@@ -37,11 +15,8 @@ DROP VIEW IF EXISTS reporting.vw_dashboard_uc1,
                     reporting.vw_population_supply,
                     reporting.vw_rental_affordability;
 
--- -----------------------------------------------------------------------------
--- UC1 - Area-level rental affordability pressure and rent trend proxy.
--- Grain: LGA x quarter x dwelling type x bedroom band.
--- Filter is_lga_headline = TRUE for the one-row-per-LGA view.
--- -----------------------------------------------------------------------------
+-- UC1: headline rent / 2021 Census income x 100, per LGA and quarter.
+-- Uses the source's Total/Total median; medians are never re-aggregated.
 CREATE OR REPLACE VIEW reporting.vw_rental_affordability AS
 WITH rent AS (
     SELECT f.rental_fact_key,
@@ -65,7 +40,7 @@ WITH rent AS (
     JOIN dw.dim_dwelling_type d ON d.dwelling_type_key = f.dwelling_type_key
 ),
 with_income AS (
-    -- Latest Census income published on or before the rent quarter.
+
     SELECT r.*,
            inc.census_income_fact_key,
            inc.median_weekly_household_income,
@@ -104,12 +79,12 @@ SELECT lga_code,
        median_weekly_household_income                AS census_median_weekly_household_income,
        census_vintage                                AS income_reference_year,
        rent_to_income_pct,
-       -- change only against the immediately preceding quarter
+
        CASE WHEN prev_quarter_start = (quarter_start - interval '3 months')::date
             THEN median_weekly_rent - prev_median_weekly_rent END                     AS rent_change_vs_prev_qtr,
        CASE WHEN prev_quarter_start = (quarter_start - interval '3 months')::date
             THEN round(100 * (median_weekly_rent / prev_median_weekly_rent - 1), 2) END AS rent_change_pct,
-       -- 1 = highest rent-to-income ratio among LGAs in that quarter
+
        CASE WHEN is_lga_headline
             THEN rank() OVER (PARTITION BY quarter_start, is_lga_headline
                               ORDER BY rent_to_income_pct DESC NULLS LAST) END        AS affordability_pressure_rank,
@@ -120,15 +95,11 @@ SELECT lga_code,
          || ' Census median household income; not a household rent-burden measure.' AS interpretation_note
 FROM with_change;
 
--- -----------------------------------------------------------------------------
--- UC2 - Population growth versus housing approval activity proxy.
--- Grain: LGA x financial year (July-June).
--- Population change = ERP at 30 June (end of FY) - ERP at 30 June a year earlier.
--- -----------------------------------------------------------------------------
+-- UC2: population growth vs DA approvals per 1,000 residents, by financial
+-- year (July-June, to match the 30 June ERP).
 CREATE OR REPLACE VIEW reporting.vw_population_supply AS
 WITH years AS (
-    -- Keep every in-scope LGA visible for each supplied financial year, even
-    -- when one LGA has no housing rows at all for that year.
+
     SELECT DISTINCT t.financial_year, t.financial_year_label
     FROM dw.fact_housing_supply f
     JOIN dw.dim_time t ON t.time_key = f.time_key
@@ -163,7 +134,7 @@ SELECT g.lga_code,
        s.lodged_dwellings,
        s.da_approved_dwellings,
        s.cc_approved_dwellings,
-       coalesce(s.stage_months_reported, 0) AS stage_months_reported,  -- 36 = 12 months x 3 stages
+       coalesce(s.stage_months_reported, 0) AS stage_months_reported,
        coalesce(s.stage_months_reported, 0) = 36 AS is_complete_supply_year,
        round(1000.0 * s.da_approved_dwellings / nullif(p1.erp, 0), 2)   AS da_approved_per_1000_residents,
        round((p1.erp - p0.erp)::numeric / nullif(s.da_approved_dwellings, 0), 2)
@@ -184,11 +155,7 @@ LEFT JOIN population p0 ON p0.geography_key = g.geography_key AND p0.financial_y
 WHERE make_date(y.financial_year - 1, 7, 1) >= g.valid_from
   AND (g.valid_to IS NULL OR make_date(y.financial_year - 1, 7, 1) < g.valid_to);
 
--- -----------------------------------------------------------------------------
--- UC3 - Housing supply pipeline activity.
--- Grain: LGA x month, one column per stage. A missing stage-month is NULL
--- (not zero) and is counted in stages_reported.
--- -----------------------------------------------------------------------------
+-- UC3: monthly counts per stage; a missing month stays NULL, never 0.
 CREATE OR REPLACE VIEW reporting.vw_housing_pipeline AS
 WITH month_bounds AS (
     SELECT min(t.date_value) AS first_month, max(t.date_value) AS last_month
@@ -223,9 +190,7 @@ WHERE t.date_value >= g.valid_from
   AND (g.valid_to IS NULL OR t.date_value < g.valid_to)
 GROUP BY g.lga_code, g.lga_name, t.date_value, t.calendar_quarter_label, t.financial_year_label;
 
--- -----------------------------------------------------------------------------
--- UC5 support - lineage of every fact row back to its source file row.
--- -----------------------------------------------------------------------------
+-- UC5: one row per fact with its source file, row number and batch.
 CREATE OR REPLACE VIEW reporting.vw_lineage AS
 SELECT 'fact_rental'::text       AS fact_table,
        f.rental_fact_key          AS fact_key,
@@ -278,13 +243,7 @@ JOIN src_housing.housing_supply_lga_month_raw s  ON s.source_row_id  = f.source_
 JOIN control.source_file sf                      ON sf.source_file_id = s.source_file_id
 JOIN control.load_batch b                        ON b.load_batch_id  = f.load_batch_id;
 
--- -----------------------------------------------------------------------------
--- Dashboard export: exactly the rows and columns written to dashboard/data.js.
--- The exporter reads ONLY these views, and the fingerprint below hashes the
--- same rows in the same order. File 11 records the fingerprint of the data it
--- tested; the exporter marks data.js VERIFIED only if the data it exports has
--- that same fingerprint, i.e. nothing changed between testing and export.
--- -----------------------------------------------------------------------------
+-- The exact rows exported to the dashboard.
 CREATE VIEW reporting.vw_dashboard_uc1 AS
 SELECT lga_code, lga_name, quarter, quarter_start,
        median_weekly_rent, census_median_weekly_household_income,
@@ -306,6 +265,7 @@ SELECT lga_code, lga_name, month_start, month_label,
        cc_approved_dwellings, stages_reported
 FROM reporting.vw_housing_pipeline;
 
+-- MD5 of the three export views in a fixed order; file 11 stores it per test run.
 CREATE FUNCTION reporting.dashboard_fingerprint()
 RETURNS text LANGUAGE sql STABLE AS $$
     SELECT md5(
@@ -319,6 +279,7 @@ $$;
 
 COMMIT;
 
+-- Check: the reporting views exist.
 SELECT table_name AS reporting_view
 FROM information_schema.views
 WHERE table_schema = 'reporting'

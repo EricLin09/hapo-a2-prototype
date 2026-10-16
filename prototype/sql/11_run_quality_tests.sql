@@ -1,33 +1,13 @@
--- =============================================================================
--- File        : 11_run_quality_tests.sql
--- Purpose     : Run the end-to-end quality tests and store every result in
---               control.test_result as evidence for the report.
--- Design link : Testing Plan 8 (build smoke, COPY/INSERT reconciliation,
---               fact-grain uniqueness, referential integrity, domain and range,
---               transformation unit tests, metric tests, idempotency, report
---               reconciliation, end to end) and Definition of Done 12.
--- Owner       : Team 3 (all members re-run it before recording the demo)
--- Run in      : database hapo_a2
--- Depends on  : 10_create_reporting_views.sql; 06 run twice for TC-LD-02/03
--- Re-runnable : yes - each execution gets a new run_id
--- Expected    : 50 tests, every test PASS. Any CRITICAL failure raises an error
---               at the end, so run_all.sh stops and the demo must not be recorded.
---
--- Running in a GUI client (CloudBeaver, VS Code)
---   Results are collected in the permanent table control.test_work, not a
---   session TEMP table, so every statement can run on its own and the file can
---   be executed in one go or in two parts (see "PART 2" below). Step 0 clears
---   the previous collection; section 8 copies it into control.test_result.
---   Every test always writes a row (missing data gives NOT_FOUND = FAIL), and
---   TC-SM-03 fails if any test row is missing, so a test cannot silently vanish.
--- =============================================================================
+-- 11_run_quality_tests.sql
+-- Runs 50 tests and stores the results in control.test_result. Any CRITICAL
+-- failure stops the build. Results collect in control.test_work, so the file
+-- can be run in one go or in two parts (see PART 2).
+-- Run in: hapo_a2. Depends on: 10.
 
--- 0. Start a new collection of test results.
+-- Start a new collection of results.
 TRUNCATE control.test_work;
 
--- -----------------------------------------------------------------------------
--- 1. Build smoke test
--- -----------------------------------------------------------------------------
+-- Build smoke tests.
 INSERT INTO control.test_work
 SELECT 'TC-SM-01', 'Build smoke', 'All 10 prototype schemas exist', 'CRITICAL', '10',
        count(*)::text, '01_create_database_schemas.sql'
@@ -51,9 +31,7 @@ FROM unnest(ARRAY[
     'reporting.vw_housing_pipeline','reporting.vw_lineage',
     'reporting.vw_dashboard_uc1','reporting.vw_dashboard_uc2','reporting.vw_dashboard_uc3']) AS obj;
 
--- -----------------------------------------------------------------------------
--- 2. Load reconciliation and idempotency
--- -----------------------------------------------------------------------------
+-- Load and idempotency.
 INSERT INTO control.test_work
 SELECT 'TC-LD-01', 'Load reconciliation', 'Every registered file has exactly its row count in the source table (files with a mismatch)',
        'CRITICAL', '0',
@@ -87,9 +65,7 @@ SELECT 'TC-LD-03', 'Idempotency', 'Latest load skipped the same files with zero 
                  ORDER BY load_batch_id DESC LIMIT 1), 'NOT_FOUND'),
        'control.load_batch';
 
--- -----------------------------------------------------------------------------
--- 3. Validation reconciliation: staged = accepted + rejected
--- -----------------------------------------------------------------------------
+-- Validation reconciliation and planted defects.
 INSERT INTO control.test_work
 SELECT 'TC-VR-0' || n, 'Validation reconciliation', src || ': staged rows = accepted + rejected', 'CRITICAL',
        staged::text, (accepted + rejected)::text, '07_transform_and_validate.sql'
@@ -106,7 +82,6 @@ FROM (VALUES
 CROSS JOIN LATERAL (SELECT count(*) AS rejected FROM curated.rejected_row r
                     WHERE r.source_system = v.src) AS r;
 
--- Negative tests: exactly the planted defects are rejected, with the right rule.
 INSERT INTO control.test_work
 SELECT 'TC-VR-05', 'Negative tests', 'Rejected rows by source and rule match the planted defects', 'CRITICAL',
        'ABS_CENSUS:R01=1; ABS_CENSUS:R03=1; ABS_ERP:R06=1; ABS_ERP:R07=1; DCJ_RENT:R01=1; DCJ_RENT:R02=1; '
@@ -117,9 +92,7 @@ SELECT 'TC-VR-05', 'Negative tests', 'Rejected rows by source and rule match the
 FROM (SELECT source_system, rule_code, count(*) AS n
       FROM curated.rejected_row GROUP BY 1, 2) x;
 
--- -----------------------------------------------------------------------------
--- 4. Transformation unit tests (the same functions the ETL uses)
--- -----------------------------------------------------------------------------
+-- Transformation units: parsing, aliases, suppression and rules.
 INSERT INTO control.test_work VALUES
  ('TC-TU-01', 'Transformation unit', 'Quarter label "Mar Qtr 2025" -> quarter start', 'CRITICAL',
   '2025-01-01', curated.parse_dcj_quarter('Mar Qtr 2025')::text, 'curated.parse_dcj_quarter'),
@@ -173,8 +146,7 @@ INSERT INTO control.test_work VALUES
 INSERT INTO control.test_work
 SELECT 'TC-TU-12', 'Negative tests', 'Planted zero rent is rejected as invalid measure R03',
        'CRITICAL', 'R03',
-       -- string_agg: NOT_FOUND if the row was not rejected, "R03,R03" if it
-       -- was rejected twice; either way the test FAILs instead of vanishing
+
        coalesce((SELECT string_agg(r.rule_code, ',' ORDER BY r.rule_code)
                  FROM curated.rejected_row r
                  JOIN src_rental.rent_lga_quarter_raw s ON s.source_row_id = r.source_row_id
@@ -189,8 +161,6 @@ INSERT INTO control.test_work VALUES
   coalesce(curated.census_reference_date(NULL::smallint)::text, 'NULL'),
   'curated.census_reference_date');
 
--- Range is checked before any cast: oversized but well-formed numbers parse to
--- NULL (quarantined as R07) instead of raising an error that aborts file 07.
 INSERT INTO control.test_work VALUES
  ('TC-TU-15', 'Transformation unit',
   'Range-safe parsing: integer max | max + 1 | 8-digit money | 9-digit money', 'CRITICAL',
@@ -229,15 +199,12 @@ SELECT 'TC-TU-14', 'Census scope', 'No non-2021 Census rows reach curated accept
        'CRITICAL', '0', count(*)::text, 'curated.census_income_accepted'
 FROM curated.census_income_accepted WHERE census_year IS DISTINCT FROM 2021;
 
--- =============================================================================
--- PART 2 - if your SQL client struggles with the whole file, run everything
--- above this line first, then everything below it. Results collected so far
--- are kept in control.test_work between the two parts.
--- =============================================================================
+-- ============================================================================
+-- PART 2: if your SQL client cannot run the whole file, run the part above
+-- this line first, then the part below it.
+-- ============================================================================
 
--- -----------------------------------------------------------------------------
--- 5. Warehouse integrity
--- -----------------------------------------------------------------------------
+-- Warehouse integrity.
 INSERT INTO control.test_work
 SELECT 'TC-DW-0' || n, 'Fact completeness', fact || ': fact rows = curated accepted rows', 'CRITICAL',
        accepted::text, facts::text, '09_load_facts.sql'
@@ -293,9 +260,7 @@ SELECT 'TC-DW-08', 'Lineage (UC5)', 'Every fact row traces to a source file row'
        'reporting.vw_lineage'
 FROM reporting.vw_lineage;
 
--- -----------------------------------------------------------------------------
--- 6. Metric tests against hand-calculated values (see header of file 05)
--- -----------------------------------------------------------------------------
+-- Metrics: hand-calculated golden values.
 INSERT INTO control.test_work
 SELECT 'TC-MT-01', 'Metric', 'UC1 Parramatta 2025-Q1: rent | 2021 income | rent-to-income %', 'CRITICAL',
        '600.00|2000.00|30.00',
@@ -330,9 +295,7 @@ SELECT 'TC-MT-04', 'Metric', 'UC2 growth is unavailable (not zero) where an ERP 
        'reporting.vw_population_supply'
 FROM reporting.vw_population_supply;
 
--- -----------------------------------------------------------------------------
--- 7. Report reconciliation: report totals agree with independent fact totals
--- -----------------------------------------------------------------------------
+-- Report reconciliation.
 INSERT INTO control.test_work
 SELECT 'TC-RR-01', 'Report reconciliation',
        'UC1 headline bonds = sum of details, or >= sum of published details when some are suppressed (violations)',
@@ -372,9 +335,7 @@ FROM (SELECT lga_code, quarter,
       GROUP BY lga_code, quarter) x
 WHERE headline < lo OR headline > hi;
 
--- -----------------------------------------------------------------------------
--- 7b. Join integrity: report views must not multiply, duplicate or mis-time rows
--- -----------------------------------------------------------------------------
+-- Join integrity.
 INSERT INTO control.test_work
 SELECT 'TC-JN-01', 'Join integrity', 'UC1 view has exactly one row per rental fact (joins do not multiply rows)',
        'CRITICAL',
@@ -403,8 +364,6 @@ FROM (SELECT 1 FROM reporting.vw_housing_pipeline
       GROUP BY lga_code, month_start
       HAVING count(*) > 1) x;
 
--- Compared by date, not year: Census night (10 Aug 2021) is later than the
--- start of the Jul-Sep 2021 quarter even though both fall in 2021.
 INSERT INTO control.test_work
 SELECT 'TC-JN-05', 'Temporal join', 'UC1 never uses Census income dated after the rent quarter starts (rows)',
        'CRITICAL', '0', count(*)::text, 'reporting.vw_rental_affordability'
@@ -413,18 +372,13 @@ JOIN dw.fact_census_income ci ON ci.census_income_fact_key = r.census_income_fac
 JOIN dw.dim_time ct           ON ct.time_key = ci.time_key
 WHERE ct.date_value > r.quarter_start;
 
--- -----------------------------------------------------------------------------
--- 8. Completeness guard, then store the results under a new run_id
--- -----------------------------------------------------------------------------
-
--- Every test above must have written exactly one row. If a test was skipped
--- (for example, a part of this file was not run) this check fails.
+-- Completeness: every other test wrote a result.
 INSERT INTO control.test_work
 SELECT 'TC-SM-03', 'Build smoke', 'All 49 other tests wrote a result in this execution', 'CRITICAL',
        '49', count(*)::text, '11_run_quality_tests.sql'
 FROM control.test_work;
 
--- Open a new run and record the fingerprint of the dashboard data just tested.
+-- Record the run with the fingerprint of the tested report data.
 INSERT INTO control.test_run (run_id, report_fingerprint)
 SELECT nextval('control.test_run_seq'), reporting.dashboard_fingerprint();
 
@@ -437,7 +391,7 @@ SELECT r.run_id, w.test_id, w.test_group, w.test_name, w.severity, w.expected_re
 FROM control.test_work w
 CROSS JOIN (SELECT max(run_id) AS run_id FROM control.test_run) r;
 
--- Results of this run (latest run_id).
+-- Show the results.
 SELECT test_id, severity, status, test_name, expected_result, actual_result
 FROM control.test_result
 WHERE run_id = (SELECT max(run_id) FROM control.test_result)

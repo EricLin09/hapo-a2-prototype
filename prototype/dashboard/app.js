@@ -7,9 +7,9 @@
   }
 
   const $ = (id) => document.getElementById(id);
-  $('metric-lgas').textContent = new Set(data.uc1.map(r => r.lga_code)).size.toString().padStart(2,'0');
-  $('metric-quarters').textContent = new Set(data.uc1.map(r => r.quarter_start)).size.toString().padStart(2,'0');
-  $('metric-months').textContent = new Set(data.uc3.map(r => r.month_start)).size.toString().padStart(2,'0');
+  $('metric-lgas').textContent = new Set(data.uc1.map(r => r.lga_code)).size;
+  $('metric-quarters').textContent = new Set(data.uc1.map(r => r.quarter_start)).size;
+  $('metric-months').textContent = new Set(data.uc3.map(r => r.month_start)).size;
   const meta = data.meta || {};
   const exportedAt = meta.generated_at ? new Date(meta.generated_at) : null;
   const timeLabel = exportedAt && !Number.isNaN(exportedAt.getTime())
@@ -17,12 +17,9 @@
     : 'time unavailable';
   const verified = meta.verified === true && meta.test_run?.total > 0
     && meta.test_run.passed === meta.test_run.total;
-  $('verification-status').classList.toggle('is-unverified',!verified);
-  $('verification-detail').classList.toggle('is-unverified',!verified);
-  $('verification-badge').textContent = verified ? `RUN ${meta.test_run.id} / VERIFIED` : 'UNVERIFIED EXPORT';
   $('verification-detail').textContent = verified
-    ? `VERIFIED · RUN ${meta.test_run.id} · ${meta.test_run.passed}/${meta.test_run.total} PASS · ${timeLabel}`
-    : `UNVERIFIED EXPORT · ${timeLabel}`;
+    ? `Status: VERIFIED. Test run ${meta.test_run.id} passed ${meta.test_run.passed} of ${meta.test_run.total} tests on this data. Exported ${timeLabel}.`
+    : `Status: UNVERIFIED export (not checked against a passing test run). Exported ${timeLabel}.`;
   const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = (value, decimals = 0) => value == null ? 'n/a' : Number(value).toLocaleString('en-AU', {maximumFractionDigits: decimals, minimumFractionDigits: decimals});
   const svg = (body, width, height) => `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
@@ -124,7 +121,7 @@
       const x=X(i);
       if(hasRatio(r)){
         const y=Y(r.rent_to_income_pct);
-        trendSvg+=`<circle cx="${x}" cy="${y}" r="4" fill="#49ebd4"/>`;
+        trendSvg+=`<circle class="pt" cx="${x}" cy="${y}" r="4"/>`;
         trendSvg+=hit(x,y,11,`${r.quarter}: ${fmt(r.rent_to_income_pct,2)}%; rent $${fmt(r.median_weekly_rent)}`);
       } else {
         trendSvg+=text(x,y0-8,'n/a','tick missing','middle');
@@ -216,7 +213,7 @@
         segment.push(`${X(i)},${Y(r[key])}`);
       });
       flush();
-      rows.forEach((r,i)=>{if(r[key]!=null)chart+=`<circle cx="${X(i)}" cy="${Y(r[key])}" r="3" fill="#0b1a27" stroke="${cls==='line-lodged'?'#49ebd4':cls==='line-da'?'#ffbb69':'#ff69bb'}" stroke-width="2"/>`});
+      rows.forEach((r,i)=>{if(r[key]!=null)chart+=`<circle class="mk ${cls.replace('line-','mk-')}" cx="${X(i)}" cy="${Y(r[key])}" r="3"/>`});
     }
     // One invisible column per month shows all three stages together; the
     // stage points sit too close to each other to hover one by one.

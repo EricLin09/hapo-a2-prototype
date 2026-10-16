@@ -1,20 +1,11 @@
--- =============================================================================
--- File        : 02_create_control_tables.sql
--- Purpose     : Create the control tables that every layer writes to:
---               load batches, registered source files and test results.
--- Design link : Solution Architecture 2.1 (CONTROL schema) and Testing Plan
---               (CONTROL.TEST_RESULT); supports UC5 traceability.
--- Owner       : Team 3
--- Run in      : database hapo_a2
--- Depends on  : 01_create_database_schemas.sql
--- Re-runnable : yes (IF NOT EXISTS); existing control history is kept
--- Expected    : control.load_batch, source_file, test_run, test_work, test_result
--- =============================================================================
+-- 02_create_control_tables.sql
+-- Creates the control tables used by every layer: load batches, registered
+-- source files and test results.
+-- Run in: hapo_a2. Depends on: 01.
 
 BEGIN;
 
--- One row per execution of the source load (06). A batch that finds only files
--- it has already loaded is closed as SKIPPED_NO_CHANGE (idempotency evidence).
+-- One row per run of file 06; a run that finds nothing new is SKIPPED_NO_CHANGE.
 CREATE TABLE IF NOT EXISTS control.load_batch (
     load_batch_id  integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     batch_label    text        NOT NULL,
@@ -26,16 +17,15 @@ CREATE TABLE IF NOT EXISTS control.load_batch (
     rows_loaded    integer     NOT NULL DEFAULT 0 CHECK (rows_loaded >= 0)
 );
 
--- One row per source-shaped delivery that was actually loaded. The MD5 is a
--- fingerprint of ordered landing-table rows, not a checksum of original file
--- bytes. Identical loaded content is never inserted twice.
+-- One row per loaded delivery. The MD5 of its ordered rows stops the same
+-- content from being loaded twice.
 CREATE TABLE IF NOT EXISTS control.source_file (
     source_file_id   integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     load_batch_id    integer     NOT NULL REFERENCES control.load_batch,
     source_system    text        NOT NULL
                      CHECK (source_system IN ('DCJ_RENT', 'ABS_CENSUS', 'ABS_ERP', 'NSW_HOUSING')),
-    target_table     text        NOT NULL,   -- src_* table that received the rows
-    source_file_name text        NOT NULL,   -- name of the delivered file
+    target_table     text        NOT NULL,
+    source_file_name text        NOT NULL,
     content_md5      text        NOT NULL CHECK (content_md5 ~ '^[0-9a-f]{32}$'),
     row_count        integer     NOT NULL CHECK (row_count >= 0),
     is_synthetic     boolean     NOT NULL,
@@ -43,7 +33,7 @@ CREATE TABLE IF NOT EXISTS control.source_file (
     UNIQUE (source_system, content_md5)
 );
 
--- Test evidence (file 11). One run_id per execution of the test suite.
+-- Test evidence written by file 11.
 CREATE SEQUENCE IF NOT EXISTS control.test_run_seq;
 
 CREATE TABLE IF NOT EXISTS control.test_result (
@@ -61,19 +51,14 @@ CREATE TABLE IF NOT EXISTS control.test_result (
     UNIQUE (run_id, test_id)
 );
 
--- One row per execution of the test suite, with the fingerprint of the
--- dashboard export data that was tested (reporting.dashboard_fingerprint()).
--- The dashboard exporter only marks its output VERIFIED when the data it
--- exports still has this fingerprint and every test of the run passed.
+-- One row per test run, with the fingerprint of the report data it tested.
 CREATE TABLE IF NOT EXISTS control.test_run (
     run_id             integer     PRIMARY KEY,
     tested_at          timestamptz NOT NULL DEFAULT clock_timestamp(),
     report_fingerprint text        NOT NULL CHECK (report_fingerprint ~ '^[0-9a-f]{32}$')
 );
 
--- Working area for file 11. A permanent table (not a session TEMP table) so
--- that every test statement can be run on its own, in any SQL client, and the
--- file can be split into parts without losing the results already collected.
+-- Working table for file 11, so the test file can also be run in two parts.
 CREATE TABLE IF NOT EXISTS control.test_work (
     test_id            text PRIMARY KEY,
     test_group         text NOT NULL,

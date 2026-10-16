@@ -8,15 +8,15 @@ SELECT 728
 UPDATE 1
 INSERT 0 8
 INSERT 0 720
-NOTICE:  table "stg_census_income" does not exist, skipping
 DROP TABLE
+NOTICE:  table "stg_census_income" does not exist, skipping
 SELECT 12
 SELECT 12
 UPDATE 0
 INSERT 0 2
 INSERT 0 10
-DROP TABLE
 NOTICE:  table "stg_population" does not exist, skipping
+DROP TABLE
 SELECT 31
 SELECT 31
 UPDATE 0

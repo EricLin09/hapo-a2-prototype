@@ -1,26 +1,12 @@
--- =============================================================================
--- File        : 06_load_or_insert_source_data.sql
--- Purpose     : Load each delivered landing file into its source-system table,
---               adding HAPO lineage, and register the file in control.
--- Design link : End to End Data Flow step 4 "Load source" (add load_batch_id,
---               source_file_name, source_row_number, loaded_at, is_synthetic);
---               Testing Plan "COPY or INSERT reconciliation" and "Idempotency".
--- Owner       : Team 3
--- Run in      : database hapo_a2
--- Depends on  : 05_generate_source_data.sql (synthetic prototype only)
--- Re-runnable : yes - IDEMPOTENT. A file whose content (MD5) was already loaded
---               is skipped, so running this file twice never duplicates rows;
---               the second batch is closed as SKIPPED_NO_CHANGE.
--- Expected    : first run  -> 1 batch SUCCESS, 4 files, 802 rows (728+12+31+31)
---               second run -> 1 batch SKIPPED_NO_CHANGE, 0 files, 0 rows
--- This loader is synthetic-only: filenames, batch label and is_synthetic are
--- fixed below. Real extracts need explicit delivery metadata and validation
--- before this file can be used for them.
--- =============================================================================
+-- 06_load_or_insert_source_data.sql
+-- Loads each landing delivery into its source-system table with lineage and
+-- registers it in control.source_file. Content already registered is skipped,
+-- so a second run of this file loads nothing.
+-- Run in: hapo_a2. Depends on: 05.
 
 BEGIN;
 
--- 1. Open a load batch and remember its id for the rest of the transaction.
+-- Open a new load batch.
 CREATE TEMP TABLE this_batch (load_batch_id integer) ON COMMIT DROP;
 
 WITH new_batch AS (
@@ -30,11 +16,7 @@ WITH new_batch AS (
 )
 INSERT INTO this_batch SELECT load_batch_id FROM new_batch;
 
--- 2. Fingerprint every delivered file: row count + MD5 of its full content.
---    (HAVING skips a landing table that is empty.)
--- Names and the synthetic flag are deliberately fixed for this synthetic-only
--- build. A real-data mode would need explicit delivery metadata and validation.
--- content_md5 fingerprints ordered landing rows, not source-file bytes.
+-- Fingerprint each delivery (MD5 of its ordered rows).
 CREATE TEMP TABLE delivered_file ON COMMIT DROP AS
 SELECT 'DCJ_RENT'::text AS source_system,
        'src_rental.rent_lga_quarter_raw'::text AS target_table,
@@ -44,7 +26,7 @@ SELECT 'DCJ_RENT'::text AS source_system,
 FROM landing.dcj_rent_lga_quarter t HAVING count(*) > 0
 UNION ALL
 SELECT 'ABS_CENSUS', 'src_census.census_lga_income_raw',
-       '2021Census_G02_NSW_LGA_synthetic.csv',          -- Census year is read from this name
+       '2021Census_G02_NSW_LGA_synthetic.csv',
        md5(string_agg(t::text, E'\n' ORDER BY t.file_row_number)), count(*)::int
 FROM landing.abs_census_g02_lga t HAVING count(*) > 0
 UNION ALL
@@ -58,7 +40,7 @@ SELECT 'NSW_HOUSING', 'src_housing.housing_supply_lga_month_raw',
        md5(string_agg(t::text, E'\n' ORDER BY t.file_row_number)), count(*)::int
 FROM landing.nsw_housing_supply_lga_month t HAVING count(*) > 0;
 
--- 3. Register only files whose content has not been loaded before.
+-- Register only deliveries whose fingerprint is new.
 INSERT INTO control.source_file
     (load_batch_id, source_system, target_table, source_file_name, content_md5, row_count, is_synthetic)
 SELECT b.load_batch_id, f.source_system, f.target_table, f.source_file_name,
@@ -70,11 +52,7 @@ WHERE NOT EXISTS (SELECT 1
                   WHERE s.source_system = f.source_system
                     AND s.content_md5   = f.content_md5);
 
--- 4. Copy the rows of each newly registered file into its source-system table.
---    The join to control.source_file on THIS batch is what makes a repeat run
---    copy nothing.
-
--- 4a. Source system 1: DCJ rent
+-- Copy the newly registered deliveries into the source tables with lineage.
 INSERT INTO src_rental.rent_lga_quarter_raw
     (load_batch_id, source_file_id, source_file_name, source_row_number, is_synthetic,
      lga_name, quarter, dwelling_type, bedrooms, median_weekly_rent, new_bonds_lodged)
@@ -86,7 +64,6 @@ JOIN control.source_file sf
  AND sf.load_batch_id = (SELECT load_batch_id FROM this_batch)
 ORDER BY l.file_row_number;
 
--- 4b. Source system 2: ABS Census
 INSERT INTO src_census.census_lga_income_raw
     (load_batch_id, source_file_id, source_file_name, source_row_number, is_synthetic,
      lga_code_2021, median_tot_hhd_inc_weekly, tot_hhds)
@@ -98,7 +75,6 @@ JOIN control.source_file sf
  AND sf.load_batch_id = (SELECT load_batch_id FROM this_batch)
 ORDER BY l.file_row_number;
 
--- 4c. Source system 3: ABS ERP
 INSERT INTO src_population.population_lga_year_raw
     (load_batch_id, source_file_id, source_file_name, source_row_number, is_synthetic,
      lga_code, lga_name, reference_year, erp)
@@ -110,7 +86,6 @@ JOIN control.source_file sf
  AND sf.load_batch_id = (SELECT load_batch_id FROM this_batch)
 ORDER BY l.file_row_number;
 
--- 4d. Source system 4: NSW Housing Supply (still wide; unpivoted in staging)
 INSERT INTO src_housing.housing_supply_lga_month_raw
     (load_batch_id, source_file_id, source_file_name, source_row_number, is_synthetic,
      lga_name, measure,
@@ -130,8 +105,7 @@ JOIN control.source_file sf
  AND sf.load_batch_id = (SELECT load_batch_id FROM this_batch)
 ORDER BY l.file_row_number;
 
--- 5. Reconcile: every file registered in this batch must have exactly its
---    declared number of rows in its target table. Any mismatch aborts the load.
+-- Stop if any file did not load its full row count.
 DO $$
 DECLARE
     f      record;
@@ -150,7 +124,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- 6. Close the batch.
+-- Close the batch: SUCCESS, or SKIPPED_NO_CHANGE when nothing was new.
 UPDATE control.load_batch lb
 SET finished_at  = clock_timestamp(),
     files_loaded = s.files,
@@ -164,7 +138,7 @@ WHERE lb.load_batch_id = (SELECT load_batch_id FROM this_batch);
 
 COMMIT;
 
--- Evidence: every batch so far and the files each one loaded.
+-- Check: batches and registered files.
 SELECT lb.load_batch_id, lb.status, lb.files_loaded, lb.rows_loaded,
        sf.source_system, sf.source_file_name, sf.row_count, sf.content_md5
 FROM control.load_batch lb
